@@ -1,0 +1,8 @@
+# Community Configuration.
+
+# Show pingcap/tidb as an example.
+owner = "pingcap"
+repo = "tidb"
+token = "your token"
+
+log-level = "info"
