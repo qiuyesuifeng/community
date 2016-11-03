@@ -1,6 +1,6 @@
 ## community
 
-community is a tool for collecting github informations, including repos, stargazers, forkers.
+community is a tool for collecting github informations, including repos, stargazers, forkers，etc.
 
 ## How to build
 
