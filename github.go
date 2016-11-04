@@ -14,8 +14,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/google/go-github/github"
@@ -57,16 +61,16 @@ func printRepos(repos []*github.Repository) {
 	log.Infof("[repos]\n%s", content)
 }
 
-type StargazerSlice []*github.Stargazer
+type UserSlice []*github.User
 
-func (s StargazerSlice) Len() int           { return len(s) }
-func (s StargazerSlice) Less(i, j int) bool { return *s[i].User.Login < *s[j].User.Login }
-func (s StargazerSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s UserSlice) Len() int           { return len(s) }
+func (s UserSlice) Less(i, j int) bool { return *s[i].Login < *s[j].Login }
+func (s UserSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-func listStargazers(client *github.Client, owner string, repo string) ([]*github.Stargazer, error) {
+func listStargazers(client *github.Client, owner string, repo string, onlyID bool) ([]*github.User, error) {
 	opt := &github.ListOptions{PerPage: 100}
 
-	var allStargazers []*github.Stargazer
+	var users []*github.User
 	for {
 		stargazers, resp, err := client.Activity.ListStargazers(owner, repo, opt)
 		if err != nil {
@@ -74,13 +78,18 @@ func listStargazers(client *github.Client, owner string, repo string) ([]*github
 		}
 
 		for _, stargazer := range stargazers {
-			user, _, err := client.Users.GetByID(*stargazer.User.ID)
-			if err != nil {
-				return nil, errors.Trace(err)
+			var user *github.User
+
+			if onlyID {
+				user = stargazer.User
+			} else {
+				user, _, err = client.Users.GetByID(*stargazer.User.ID)
+				if err != nil {
+					return nil, errors.Trace(err)
+				}
 			}
 
-			stargazer.User = user
-			allStargazers = append(allStargazers, stargazer)
+			users = append(users, user)
 		}
 
 		if resp.NextPage == 0 {
@@ -90,43 +99,79 @@ func listStargazers(client *github.Client, owner string, repo string) ([]*github
 		opt.Page = resp.NextPage
 	}
 
-	sort.Sort(StargazerSlice(allStargazers))
-	return allStargazers, nil
-}
-
-func printStargazers(owner string, repo string, stargazers []*github.Stargazer) {
-	var content []byte
-	for _, stargazer := range stargazers {
-		content = append(content, []byte(fmt.Sprintf("%s/%s", owner, repo))...)
-		content = append(content, '\t')
-		content = append(content, []byte(unifyInt(stargazer.User.ID))...)
-		content = append(content, '\t')
-		content = append(content, []byte(unifyStr(stargazer.User.Login))...)
-		content = append(content, '\t')
-		content = append(content, []byte(unifyStr(stargazer.User.Name))...)
-		content = append(content, '\t')
-		content = append(content, []byte(unifyStr(stargazer.User.Email))...)
-		content = append(content, '\t')
-		content = append(content, []byte(unifyStr(stargazer.User.Location))...)
-		content = append(content, '\t')
-		content = append(content, []byte(unifyStr(stargazer.User.Company))...)
-		content = append(content, '\t')
-		content = append(content, []byte(unifyStr(stargazer.User.Blog))...)
-		content = append(content, '\t')
-		content = append(content, []byte(unifyStr(stargazer.User.Bio))...)
-		content = append(content, '\t')
-		content = append(content, []byte(unifyInt(stargazer.User.PublicRepos))...)
-		content = append(content, '\t')
-		content = append(content, []byte(unifyInt(stargazer.User.Following))...)
-		content = append(content, '\t')
-		content = append(content, []byte(unifyInt(stargazer.User.Followers))...)
-		content = append(content, '\t')
-		content = append(content, []byte(unifyStr(stargazer.User.HTMLURL))...)
-		content = append(content, '\n')
+	if !onlyID {
+		sort.Sort(UserSlice(users))
 	}
 
-	if len(content) > 0 {
-		content = content[:len(content)-1]
+	return users, nil
+}
+
+func listStargazersFromFile(client *github.Client, file string) ([]*github.User, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer f.Close()
+
+	var users []*github.User
+
+	br := bufio.NewReader(f)
+	for {
+		line, err := br.ReadString('\n')
+		if err == io.EOF {
+			break
+		} else {
+			id, err := strconv.ParseInt(strings.TrimSpace(line), 10, 64)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+
+			user, _, err := client.Users.GetByID(int(id))
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+
+			users = append(users, user)
+		}
+	}
+
+	return users, nil
+}
+
+func printStargazers(owner string, repo string, users []*github.User, onlyID bool) {
+	var content []byte
+	for _, user := range users {
+		if onlyID {
+			content = append(content, []byte(unifyInt(user.ID))...)
+			content = append(content, '\n')
+		} else {
+			content = append(content, []byte(fmt.Sprintf("%s/%s", owner, repo))...)
+			content = append(content, '\t')
+			content = append(content, []byte(unifyInt(user.ID))...)
+			content = append(content, '\t')
+			content = append(content, []byte(unifyStr(user.Login))...)
+			content = append(content, '\t')
+			content = append(content, []byte(unifyStr(user.Name))...)
+			content = append(content, '\t')
+			content = append(content, []byte(unifyStr(user.Email))...)
+			content = append(content, '\t')
+			content = append(content, []byte(unifyStr(user.Location))...)
+			content = append(content, '\t')
+			content = append(content, []byte(unifyStr(user.Company))...)
+			content = append(content, '\t')
+			content = append(content, []byte(unifyStr(user.Blog))...)
+			content = append(content, '\t')
+			content = append(content, []byte(unifyStr(user.Bio))...)
+			content = append(content, '\t')
+			content = append(content, []byte(unifyInt(user.PublicRepos))...)
+			content = append(content, '\t')
+			content = append(content, []byte(unifyInt(user.Following))...)
+			content = append(content, '\t')
+			content = append(content, []byte(unifyInt(user.Followers))...)
+			content = append(content, '\t')
+			content = append(content, []byte(unifyStr(user.HTMLURL))...)
+			content = append(content, '\n')
+		}
 	}
 
 	log.Infof("[stargazers][user]\n%s", string(content))

@@ -33,7 +33,9 @@ func NewConfig() *Config {
 	fs.StringVar(&cfg.Repo, "r", "", "github repo")
 	fs.StringVar(&cfg.Token, "t", "", "github access token")
 
-	fs.StringVar(&cfg.Service, "s", "", "print service information [ repos | stargazers ]")
+	fs.StringVar(&cfg.Service, "s", "", "print service information [ repos | stargazers | stargazer-ids ]")
+
+	fs.StringVar(&cfg.Input, "i", "", "input file")
 
 	fs.StringVar(&cfg.LogLevel, "L", "info", "log level: debug, info, warn, error, fatal")
 
@@ -51,6 +53,8 @@ type Config struct {
 	Token string `toml:"token" json:"token"`
 
 	Service string `json:"-"`
+
+	Input string `json:"-"`
 
 	LogLevel string `toml:"log-level" json:"log-level"`
 

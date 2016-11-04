@@ -34,12 +34,28 @@ func do(cfg *Config) {
 
 		printRepos(repos)
 	case "stargazers":
-		stargazers, err := listStargazers(client, cfg.Owner, cfg.Repo)
+		if len(cfg.Input) > 0 {
+			users, err := listStargazersFromFile(client, cfg.Input)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			printStargazers(cfg.Owner, cfg.Repo, users, false)
+		} else {
+			users, err := listStargazers(client, cfg.Owner, cfg.Repo, false)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			printStargazers(cfg.Owner, cfg.Repo, users, false)
+		}
+	case "stargazer-ids":
+		users, err := listStargazers(client, cfg.Owner, cfg.Repo, true)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		printStargazers(cfg.Owner, cfg.Repo, stargazers)
+		printStargazers(cfg.Owner, cfg.Repo, users, true)
 	}
 }
 
