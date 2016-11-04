@@ -17,12 +17,14 @@ Usage of community:
       log level: debug, info, warn, error, fatal (default "info")
   -config string
       Config file
+  -i string
+      input file
   -o string
       github owner
   -r string
       github repo
   -s string
-      print service information [ repos | stargazers ]
+      print service information [ repos | stargazers | stargazer-ids ]
   -t string
       github access token
 ```
@@ -36,8 +38,22 @@ Usage of community:
 Or use config file.
 
 ```
-./community --config=config.toml -s stargazers
+./community --config=config.toml -s repos
 ```
+
+## Service
+
+
+### repos
+List github public repos of owner.
+
+### stargazers
+List github stargazers of {owner}/{repo}.
+
+**you can choose input file for stargazers collection**
+
+### stargazer-ids
+List github stargazer ids of {owner}/{repo}.
 
 ## License
 Apache 2.0 license. See the [LICENSE](./LICENSE) file for details.
