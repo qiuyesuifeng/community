@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/go-github/github"
 	"github.com/juju/errors"
@@ -67,17 +68,42 @@ func (s UserSlice) Len() int           { return len(s) }
 func (s UserSlice) Less(i, j int) bool { return *s[i].Login < *s[j].Login }
 func (s UserSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-func listStargazers(client *github.Client, owner string, repo string, onlyID bool) ([]*github.User, error) {
+func listStargazers(client *github.Client, cfg *Config, onlyID bool) ([]*github.User, error) {
 	opt := &github.ListOptions{PerPage: 100}
+	useTimeFilter := len(cfg.StartDate) > 0 && len(cfg.EndDate) > 0
+
+	var (
+		start time.Time
+		end   time.Time
+		err   error
+	)
+
+	if useTimeFilter {
+		start, err = unifyTime(cfg.StartDate)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		end, err = unifyTime(cfg.EndDate)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+	}
 
 	var users []*github.User
 	for {
-		stargazers, resp, err := client.Activity.ListStargazers(owner, repo, opt)
+		stargazers, resp, err := client.Activity.ListStargazers(cfg.Owner, cfg.Repo, opt)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
 
 		for _, stargazer := range stargazers {
+			if useTimeFilter {
+				if !checkTime(start, end, stargazer.StarredAt.Time) {
+					continue
+				}
+			}
+
 			var user *github.User
 
 			if onlyID {
@@ -106,7 +132,7 @@ func listStargazers(client *github.Client, owner string, repo string, onlyID boo
 	return users, nil
 }
 
-func listStargazersFromFile(client *github.Client, file string) ([]*github.User, error) {
+func listUsers(client *github.Client, file string) ([]*github.User, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -138,55 +164,46 @@ func listStargazersFromFile(client *github.Client, file string) ([]*github.User,
 	return users, nil
 }
 
-func printStargazers(owner string, repo string, users []*github.User, onlyID bool) {
+func printUsers(owner string, repo string, users []*github.User) {
 	var content []byte
 	for _, user := range users {
-		if onlyID {
-			content = append(content, []byte(unifyInt(user.ID))...)
-			content = append(content, '\n')
-		} else {
-			content = append(content, []byte(fmt.Sprintf("%s/%s", owner, repo))...)
-			content = append(content, '\t')
-			content = append(content, []byte(unifyInt(user.ID))...)
-			content = append(content, '\t')
-			content = append(content, []byte(unifyStr(user.Login))...)
-			content = append(content, '\t')
-			content = append(content, []byte(unifyStr(user.Name))...)
-			content = append(content, '\t')
-			content = append(content, []byte(unifyStr(user.Email))...)
-			content = append(content, '\t')
-			content = append(content, []byte(unifyStr(user.Location))...)
-			content = append(content, '\t')
-			content = append(content, []byte(unifyStr(user.Company))...)
-			content = append(content, '\t')
-			content = append(content, []byte(unifyStr(user.Blog))...)
-			content = append(content, '\t')
-			content = append(content, []byte(unifyStr(user.Bio))...)
-			content = append(content, '\t')
-			content = append(content, []byte(unifyInt(user.PublicRepos))...)
-			content = append(content, '\t')
-			content = append(content, []byte(unifyInt(user.Following))...)
-			content = append(content, '\t')
-			content = append(content, []byte(unifyInt(user.Followers))...)
-			content = append(content, '\t')
-			content = append(content, []byte(unifyStr(user.HTMLURL))...)
-			content = append(content, '\n')
-		}
+		content = append(content, []byte(fmt.Sprintf("%s/%s", owner, repo))...)
+		content = append(content, '\t')
+		content = append(content, []byte(unifyInt(user.ID))...)
+		content = append(content, '\t')
+		content = append(content, []byte(unifyStr(user.Login))...)
+		content = append(content, '\t')
+		content = append(content, []byte(unifyStr(user.Name))...)
+		content = append(content, '\t')
+		content = append(content, []byte(unifyStr(user.Email))...)
+		content = append(content, '\t')
+		content = append(content, []byte(unifyStr(user.Location))...)
+		content = append(content, '\t')
+		content = append(content, []byte(unifyStr(user.Company))...)
+		content = append(content, '\t')
+		content = append(content, []byte(unifyStr(user.Blog))...)
+		content = append(content, '\t')
+		content = append(content, []byte(unifyStr(user.Bio))...)
+		content = append(content, '\t')
+		content = append(content, []byte(unifyInt(user.PublicRepos))...)
+		content = append(content, '\t')
+		content = append(content, []byte(unifyInt(user.Following))...)
+		content = append(content, '\t')
+		content = append(content, []byte(unifyInt(user.Followers))...)
+		content = append(content, '\t')
+		content = append(content, []byte(unifyStr(user.HTMLURL))...)
+		content = append(content, '\n')
 	}
 
-	log.Infof("[stargazers][user]\n%s", string(content))
+	log.Infof("[users]\n%s", string(content))
 }
 
-func unifyStr(s *string) string {
-	if s == nil {
-		return ""
+func printUserIDs(owner string, repo string, users []*github.User) {
+	var content []byte
+	for _, user := range users {
+		content = append(content, []byte(unifyInt(user.ID))...)
+		content = append(content, '\n')
 	}
 
-	ss := *s
-	strings.Replace(ss, "\t", "  ", -1)
-	return ss
-}
-
-func unifyInt(i *int) string {
-	return fmt.Sprintf("%d", *i)
+	log.Infof("[user ids]\n%s", string(content))
 }

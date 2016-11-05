@@ -1,6 +1,6 @@
 ## community
 
-community is a tool for collecting github informations, including repos, stargazers, forkers，etc.
+community is a tool for collecting github informations, including repos, stargazers, forkers, etc.
 
 ## How to build
 
@@ -47,13 +47,15 @@ Or use config file.
 ### repos
 List github public repos of owner.
 
+### users
+List github users.
+
+*you can choose input file as specified user ids for users collection，like `-i input`*
+
 ### stargazers
 List github stargazers of {owner}/{repo}.
 
-**you can choose input file for stargazers collection**
-
-### stargazer-ids
-List github stargazer ids of {owner}/{repo}.
+*you can choose start and end as starred time filter for stargazers collection, like `-start 2016-11-01 -end 2016-11-06`*
 
 ## License
 Apache 2.0 license. See the [LICENSE](./LICENSE) file for details.
