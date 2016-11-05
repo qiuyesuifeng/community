@@ -27,6 +27,10 @@ func do(cfg *Config) {
 
 	switch strings.ToLower(cfg.Service) {
 	case "repos":
+		if len(cfg.Owner) == 0 {
+			log.Fatal("empty owner")
+		}
+
 		repos, err := listPublicRepos(client, cfg.Owner)
 		if err != nil {
 			log.Fatal(err)
@@ -34,6 +38,14 @@ func do(cfg *Config) {
 
 		printRepos(repos)
 	case "stargazers":
+		if len(cfg.Owner) == 0 {
+			log.Fatal("empty owner")
+		}
+
+		if len(cfg.Repo) == 0 {
+			log.Fatal("empty repo")
+		}
+
 		users, err := listStargazers(client, cfg, false)
 		if err != nil {
 			log.Fatal(err)
@@ -41,15 +53,23 @@ func do(cfg *Config) {
 
 		printUsers(cfg.Owner, cfg.Repo, users)
 	case "stargazer-ids":
+		if len(cfg.Owner) == 0 {
+			log.Fatal("empty owner")
+		}
+
+		if len(cfg.Repo) == 0 {
+			log.Fatal("empty repo")
+		}
+
 		users, err := listStargazers(client, cfg, true)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		printUserIDs(cfg.Owner, cfg.Repo, users)
+		printUserIDs(users)
 	case "users":
 		if len(cfg.Input) == 0 {
-			return
+			log.Fatal("empty input")
 		}
 
 		users, err := listUsers(client, cfg.Input)
@@ -57,7 +77,7 @@ func do(cfg *Config) {
 			log.Fatal(err)
 		}
 
-		printUsers(cfg.Owner, cfg.Repo, users)
+		printUsers("", "", users)
 	}
 }
 

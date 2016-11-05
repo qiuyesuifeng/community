@@ -147,7 +147,12 @@ func listUsers(client *github.Client, file string) ([]*github.User, error) {
 		if err == io.EOF {
 			break
 		} else {
-			id, err := strconv.ParseInt(strings.TrimSpace(line), 10, 64)
+			data := strings.TrimSpace(line)
+			if len(data) == 0 {
+				continue
+			}
+
+			id, err := strconv.ParseInt(data, 10, 64)
 			if err != nil {
 				return nil, errors.Trace(err)
 			}
@@ -167,8 +172,11 @@ func listUsers(client *github.Client, file string) ([]*github.User, error) {
 func printUsers(owner string, repo string, users []*github.User) {
 	var content []byte
 	for _, user := range users {
-		content = append(content, []byte(fmt.Sprintf("%s/%s", owner, repo))...)
-		content = append(content, '\t')
+		if len(owner) > 0 && len(repo) > 0 {
+			content = append(content, []byte(fmt.Sprintf("%s/%s", owner, repo))...)
+			content = append(content, '\t')
+		}
+
 		content = append(content, []byte(unifyInt(user.ID))...)
 		content = append(content, '\t')
 		content = append(content, []byte(unifyStr(user.Login))...)
@@ -198,7 +206,7 @@ func printUsers(owner string, repo string, users []*github.User) {
 	log.Infof("[users]\n%s", string(content))
 }
 
-func printUserIDs(owner string, repo string, users []*github.User) {
+func printUserIDs(users []*github.User) {
 	var content []byte
 	for _, user := range users {
 		content = append(content, []byte(unifyInt(user.ID))...)

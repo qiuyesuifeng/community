@@ -17,6 +17,8 @@ Usage of community:
       log level: debug, info, warn, error, fatal (default "info")
   -config string
       Config file
+  -end string
+      end date
   -i string
       input file
   -o string
@@ -24,7 +26,9 @@ Usage of community:
   -r string
       github repo
   -s string
-      print service information [ repos | stargazers | stargazer-ids ]
+      print service information [ repos | stargazers | stargazer-ids | users ]
+  -start string
+      start date
   -t string
       github access token
 ```
@@ -32,13 +36,13 @@ Usage of community:
 ## Example
 
 ```
-./community -o pingcap -r tidb -t {your-token} -s repos
+./community -o pingcap -r tidb -t {your-token} -s {service}
 ```
 
 Or use config file.
 
 ```
-./community --config=config.toml -s repos
+./community --config=config.toml -s {service}
 ```
 
 ## Service
@@ -47,15 +51,20 @@ Or use config file.
 ### repos
 List github public repos of owner.
 
-### users
-List github users.
-
-*you can choose input file as specified user ids for users collection，like `-i input`*
-
 ### stargazers
 List github stargazers of {owner}/{repo}.
 
 *you can choose start and end as starred time filter for stargazers collection, like `-start 2016-11-01 -end 2016-11-06`*
+
+### stargazer-ids
+List github stargazer ids of {owner}/{repo}.
+
+*you can choose start and end as starred time filter for stargazers collection, like `-start 2016-11-01 -end 2016-11-06`*
+
+### users
+List github users.
+
+*you can choose input file as specified user ids for users collection，like `-i input`*
 
 ## License
 Apache 2.0 license. See the [LICENSE](./LICENSE) file for details.

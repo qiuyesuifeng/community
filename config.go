@@ -68,22 +68,6 @@ type Config struct {
 	configFile string
 }
 
-func (c *Config) check() error {
-	if len(c.Owner) == 0 {
-		return errors.New("empty owner")
-	}
-
-	if len(c.Repo) == 0 {
-		return errors.New("empty repo")
-	}
-
-	if len(c.Token) == 0 {
-		return errors.New("empty token")
-	}
-
-	return nil
-}
-
 // Parse parses flag definitions from the argument list.
 func (c *Config) Parse(arguments []string) error {
 	// Parse first to get config file.
@@ -108,11 +92,6 @@ func (c *Config) Parse(arguments []string) error {
 
 	if len(c.FlagSet.Args()) != 0 {
 		return errors.Errorf("'%s' is an invalid flag", c.FlagSet.Arg(0))
-	}
-
-	err = c.check()
-	if err != nil {
-		return errors.Trace(err)
 	}
 
 	return nil
