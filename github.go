@@ -53,6 +53,7 @@ func listPublicRepos(client *github.Client, org string) ([]*github.Repository, e
 func printRepos(repos []*github.Repository) {
 	var names []string
 	for _, repo := range repos {
+		log.Infof("[repo]%v", repo)
 		names = append(names, *repo.Name)
 	}
 
@@ -67,6 +68,62 @@ type UserSlice []*github.User
 func (s UserSlice) Len() int           { return len(s) }
 func (s UserSlice) Less(i, j int) bool { return *s[i].Login < *s[j].Login }
 func (s UserSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+
+func listForkers(client *github.Client, cfg *Config) ([]*github.User, error) {
+	useTimeFilter := len(cfg.StartDate) > 0 && len(cfg.EndDate) > 0
+
+	var (
+		start time.Time
+		end   time.Time
+		err   error
+	)
+
+	if useTimeFilter {
+		start, err = unifyTime(cfg.StartDate)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		end, err = unifyTime(cfg.EndDate)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+	}
+
+	opt := &github.RepositoryListForksOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+	var users []*github.User
+	for {
+		repos, resp, err := client.Repositories.ListForks(cfg.Owner, cfg.Repo, opt)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		for _, repo := range repos {
+			if useTimeFilter {
+				if !checkTime(start, end, repo.CreatedAt.Time) {
+					continue
+				}
+			}
+
+			user, _, err := client.Users.GetByID(*repo.Owner.ID)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+
+			users = append(users, user)
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+
+		opt.Page = resp.NextPage
+	}
+
+	return users, nil
+}
 
 func listStargazers(client *github.Client, cfg *Config, onlyID bool) ([]*github.User, error) {
 	opt := &github.ListOptions{PerPage: 100}

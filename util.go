@@ -35,7 +35,9 @@ func unifyStr(s *string) string {
 	}
 
 	ss := *s
-	strings.Replace(ss, "\t", "  ", -1)
+	ss = strings.Replace(ss, "\t", " ", -1)
+	ss = strings.Replace(ss, "\n", " ", -1)
+	ss = strings.Replace(ss, "\r", " ", -1)
 	return ss
 }
 

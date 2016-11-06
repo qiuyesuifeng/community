@@ -26,6 +26,21 @@ func do(cfg *Config) {
 	client := newClient(cfg.Token)
 
 	switch strings.ToLower(cfg.Service) {
+	case "forkers":
+		if len(cfg.Owner) == 0 {
+			log.Fatal("empty owner")
+		}
+
+		if len(cfg.Repo) == 0 {
+			log.Fatal("empty repo")
+		}
+
+		users, err := listForkers(client, cfg)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		printUsers(cfg.Owner, cfg.Repo, users)
 	case "repos":
 		if len(cfg.Owner) == 0 {
 			log.Fatal("empty owner")

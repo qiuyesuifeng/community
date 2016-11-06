@@ -26,7 +26,7 @@ Usage of community:
   -r string
       github repo
   -s string
-      print service information [ repos | stargazers | stargazer-ids | users ]
+      print service information [ forkers | repos | stargazers | stargazer-ids | users ]
   -start string
       start date
   -t string
@@ -47,6 +47,10 @@ Or use config file.
 
 ## Service
 
+### forkers
+List github forkers of {owner}/{repo}.
+
+*you can choose start and end as starred time filter for stargazers collection, like `-start 2016-11-01 -end 2016-11-06`*
 
 ### repos
 List github public repos of owner.
