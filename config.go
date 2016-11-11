@@ -33,7 +33,7 @@ func NewConfig() *Config {
 	fs.StringVar(&cfg.Repo, "r", "", "github repo")
 	fs.StringVar(&cfg.Token, "t", "", "github access token")
 
-	fs.StringVar(&cfg.Service, "s", "", "print service information [ forkers | repos | stargazers | stargazer-ids | users ]")
+	fs.StringVar(&cfg.Service, "s", "", "print service information [ forkers | repos | stargazers | stargazer-ids | users | watchers ]")
 
 	fs.StringVar(&cfg.Input, "i", "", "input file")
 

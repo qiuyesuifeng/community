@@ -125,6 +125,67 @@ func listForkers(client *github.Client, cfg *Config) ([]*github.User, error) {
 	return users, nil
 }
 
+func listWatchers(client *github.Client, cfg *Config) ([]*github.User, error) {
+	opt := &github.ListOptions{PerPage: 100}
+
+	var allUsers []*github.User
+	for {
+		users, resp, err := client.Activity.ListWatchers(cfg.Owner, cfg.Repo, opt)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		for _, user := range users {
+			user, _, err := client.Users.GetByID(*user.ID)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+
+			allUsers = append(allUsers, user)
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+
+		opt.Page = resp.NextPage
+	}
+
+	return allUsers, nil
+}
+
+func listIssues(client *github.Client, cfg *Config) ([]*github.User, error) {
+	var users []*github.User
+	userCache := make(map[int]struct{})
+	for {
+		issues, resp, err := client.Issues.ListByRepo(cfg.Owner, cfg.Repo, nil)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		for _, issue := range issues {
+			_, ok := userCache[*issue.User.ID]
+			if ok {
+				continue
+			}
+
+			user, _, err := client.Users.GetByID(*issue.User.ID)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+
+			users = append(users, user)
+			userCache[*issue.User.ID] = struct{}{}
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+	}
+
+	return users, nil
+}
+
 func listStargazers(client *github.Client, cfg *Config, onlyID bool) ([]*github.User, error) {
 	opt := &github.ListOptions{PerPage: 100}
 	useTimeFilter := len(cfg.StartDate) > 0 && len(cfg.EndDate) > 0

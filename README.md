@@ -26,7 +26,7 @@ Usage of community:
   -r string
       github repo
   -s string
-      print service information [ forkers | repos | stargazers | stargazer-ids | users ]
+      print service information [ forkers | issues | repos | stargazers | stargazer-ids | users | watchers ]
   -start string
       start date
   -t string
@@ -50,7 +50,10 @@ Or use config file.
 ### forkers
 List github forkers of {owner}/{repo}.
 
-*you can choose start and end as starred time filter for stargazers collection, like `-start 2016-11-01 -end 2016-11-06`*
+*you can choose start and end as starred time filter for forkers collection, like `-start 2016-11-01 -end 2016-11-06`*
+
+### issues
+List github issuers of {owner}/{repo}.
 
 ### repos
 List github public repos of owner.
@@ -69,6 +72,9 @@ List github stargazer ids of {owner}/{repo}.
 List github users.
 
 *you can choose input file as specified user ids for users collection，like `-i input`*
+
+### watchers
+List github watchers of {owner}/{repo}.
 
 ## License
 Apache 2.0 license. See the [LICENSE](./LICENSE) file for details.
