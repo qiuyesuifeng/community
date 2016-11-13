@@ -155,10 +155,14 @@ func listWatchers(client *github.Client, cfg *Config) ([]*github.User, error) {
 }
 
 func listIssues(client *github.Client, cfg *Config) ([]*github.User, error) {
+	opt := &github.IssueListByRepoOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+
 	var users []*github.User
 	userCache := make(map[int]struct{})
 	for {
-		issues, resp, err := client.Issues.ListByRepo(cfg.Owner, cfg.Repo, nil)
+		issues, resp, err := client.Issues.ListByRepo(cfg.Owner, cfg.Repo, opt)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -181,6 +185,8 @@ func listIssues(client *github.Client, cfg *Config) ([]*github.User, error) {
 		if resp.NextPage == 0 {
 			break
 		}
+
+		opt.Page = resp.NextPage
 	}
 
 	return users, nil
