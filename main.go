@@ -35,12 +35,12 @@ func do(cfg *Config) {
 			log.Fatal("empty repo")
 		}
 
-		users, err := listForkers(client, cfg)
+		users, times, err := listForkers(client, cfg)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		printUsers(cfg.Owner, cfg.Repo, users)
+		printUsers(cfg.Owner, cfg.Repo, users, times...)
 	case "issues":
 		if len(cfg.Owner) == 0 {
 			log.Fatal("empty owner")
@@ -76,12 +76,12 @@ func do(cfg *Config) {
 			log.Fatal("empty repo")
 		}
 
-		users, err := listStargazers(client, cfg, false)
+		users, times, err := listStargazers(client, cfg, false)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		printUsers(cfg.Owner, cfg.Repo, users)
+		printUsers(cfg.Owner, cfg.Repo, users, times...)
 	case "stargazer-ids":
 		if len(cfg.Owner) == 0 {
 			log.Fatal("empty owner")
@@ -91,12 +91,12 @@ func do(cfg *Config) {
 			log.Fatal("empty repo")
 		}
 
-		users, err := listStargazers(client, cfg, true)
+		users, times, err := listStargazers(client, cfg, true)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		printUserIDs(users)
+		printUserIDs(users, times...)
 	case "users":
 		if len(cfg.Input) == 0 {
 			log.Fatal("empty input")

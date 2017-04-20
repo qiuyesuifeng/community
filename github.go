@@ -69,7 +69,7 @@ func (s UserSlice) Len() int           { return len(s) }
 func (s UserSlice) Less(i, j int) bool { return *s[i].Login < *s[j].Login }
 func (s UserSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-func listForkers(client *github.Client, cfg *Config) ([]*github.User, error) {
+func listForkers(client *github.Client, cfg *Config) ([]*github.User, []time.Time, error) {
 	useTimeFilter := len(cfg.StartDate) > 0 && len(cfg.EndDate) > 0
 
 	var (
@@ -79,25 +79,28 @@ func listForkers(client *github.Client, cfg *Config) ([]*github.User, error) {
 	)
 
 	if useTimeFilter {
-		start, err = unifyTime(cfg.StartDate)
+		start, err = parseDate(cfg.StartDate)
 		if err != nil {
-			return nil, errors.Trace(err)
+			return nil, nil, errors.Trace(err)
 		}
 
-		end, err = unifyTime(cfg.EndDate)
+		end, err = parseDate(cfg.EndDate)
 		if err != nil {
-			return nil, errors.Trace(err)
+			return nil, nil, errors.Trace(err)
 		}
 	}
 
 	opt := &github.RepositoryListForksOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
 	}
-	var users []*github.User
+	var (
+		users []*github.User
+		times []time.Time
+	)
 	for {
 		repos, resp, err := client.Repositories.ListForks(cfg.Owner, cfg.Repo, opt)
 		if err != nil {
-			return nil, errors.Trace(err)
+			return nil, nil, errors.Trace(err)
 		}
 
 		for _, repo := range repos {
@@ -109,10 +112,11 @@ func listForkers(client *github.Client, cfg *Config) ([]*github.User, error) {
 
 			user, _, err := client.Users.GetByID(*repo.Owner.ID)
 			if err != nil {
-				return nil, errors.Trace(err)
+				return nil, nil, errors.Trace(err)
 			}
 
 			users = append(users, user)
+			times = append(times, repo.CreatedAt.Time)
 		}
 
 		if resp.NextPage == 0 {
@@ -122,7 +126,7 @@ func listForkers(client *github.Client, cfg *Config) ([]*github.User, error) {
 		opt.Page = resp.NextPage
 	}
 
-	return users, nil
+	return users, times, nil
 }
 
 func listWatchers(client *github.Client, cfg *Config) ([]*github.User, error) {
@@ -192,7 +196,7 @@ func listIssues(client *github.Client, cfg *Config) ([]*github.User, error) {
 	return users, nil
 }
 
-func listStargazers(client *github.Client, cfg *Config, onlyID bool) ([]*github.User, error) {
+func listStargazers(client *github.Client, cfg *Config, onlyID bool) ([]*github.User, []time.Time, error) {
 	opt := &github.ListOptions{PerPage: 100}
 	useTimeFilter := len(cfg.StartDate) > 0 && len(cfg.EndDate) > 0
 
@@ -203,22 +207,25 @@ func listStargazers(client *github.Client, cfg *Config, onlyID bool) ([]*github.
 	)
 
 	if useTimeFilter {
-		start, err = unifyTime(cfg.StartDate)
+		start, err = parseDate(cfg.StartDate)
 		if err != nil {
-			return nil, errors.Trace(err)
+			return nil, nil, errors.Trace(err)
 		}
 
-		end, err = unifyTime(cfg.EndDate)
+		end, err = parseDate(cfg.EndDate)
 		if err != nil {
-			return nil, errors.Trace(err)
+			return nil, nil, errors.Trace(err)
 		}
 	}
 
-	var users []*github.User
+	var (
+		users []*github.User
+		times []time.Time
+	)
 	for {
 		stargazers, resp, err := client.Activity.ListStargazers(cfg.Owner, cfg.Repo, opt)
 		if err != nil {
-			return nil, errors.Trace(err)
+			return nil, nil, errors.Trace(err)
 		}
 
 		for _, stargazer := range stargazers {
@@ -235,11 +242,12 @@ func listStargazers(client *github.Client, cfg *Config, onlyID bool) ([]*github.
 			} else {
 				user, _, err = client.Users.GetByID(*stargazer.User.ID)
 				if err != nil {
-					return nil, errors.Trace(err)
+					return nil, nil, errors.Trace(err)
 				}
 			}
 
 			users = append(users, user)
+			times = append(times, stargazer.StarredAt.Time)
 		}
 
 		if resp.NextPage == 0 {
@@ -249,11 +257,7 @@ func listStargazers(client *github.Client, cfg *Config, onlyID bool) ([]*github.
 		opt.Page = resp.NextPage
 	}
 
-	if !onlyID {
-		sort.Sort(UserSlice(users))
-	}
-
-	return users, nil
+	return users, times, nil
 }
 
 func listUsers(client *github.Client, file string) ([]*github.User, error) {
@@ -271,12 +275,9 @@ func listUsers(client *github.Client, file string) ([]*github.User, error) {
 		if err == io.EOF {
 			break
 		} else {
-			data := strings.TrimSpace(line)
-			if len(data) == 0 {
-				continue
-			}
+			datas := strings.Fields(strings.TrimSpace(line))
 
-			id, err := strconv.ParseInt(data, 10, 64)
+			id, err := strconv.ParseInt(datas[0], 10, 64)
 			if err != nil {
 				return nil, errors.Trace(err)
 			}
@@ -293,9 +294,11 @@ func listUsers(client *github.Client, file string) ([]*github.User, error) {
 	return users, nil
 }
 
-func printUsers(owner string, repo string, users []*github.User) {
+func printUsers(owner string, repo string, users []*github.User, times ...time.Time) {
+	printTime := len(times) > 0
+
 	var content []byte
-	for _, user := range users {
+	for i, user := range users {
 		if len(owner) > 0 && len(repo) > 0 {
 			content = append(content, []byte(fmt.Sprintf("%s/%s", owner, repo))...)
 			content = append(content, '\t')
@@ -324,16 +327,26 @@ func printUsers(owner string, repo string, users []*github.User) {
 		content = append(content, []byte(unifyInt(user.Followers))...)
 		content = append(content, '\t')
 		content = append(content, []byte(unifyStr(user.HTMLURL))...)
+		if printTime {
+			content = append(content, '\t')
+			content = append(content, []byte(unifyDate(times[i]))...)
+		}
 		content = append(content, '\n')
 	}
 
 	log.Infof("[users]\n%s", string(content))
 }
 
-func printUserIDs(users []*github.User) {
+func printUserIDs(users []*github.User, times ...time.Time) {
+	printTime := len(times) > 0
+
 	var content []byte
-	for _, user := range users {
+	for i, user := range users {
 		content = append(content, []byte(unifyInt(user.ID))...)
+		if printTime {
+			content = append(content, '\t')
+			content = append(content, []byte(unifyDate(times[i]))...)
+		}
 		content = append(content, '\n')
 	}
 

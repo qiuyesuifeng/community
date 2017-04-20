@@ -26,7 +26,7 @@ var (
 )
 
 const (
-	timeFormat = "2006-01-02"
+	dateFormat = "2006-01-02"
 )
 
 func unifyStr(s *string) string {
@@ -45,8 +45,12 @@ func unifyInt(i *int) string {
 	return fmt.Sprintf("%d", *i)
 }
 
-func unifyTime(date string) (time.Time, error) {
-	t, err := time.Parse(timeFormat, date)
+func unifyDate(t time.Time) string {
+	return t.Format(dateFormat)
+}
+
+func parseDate(date string) (time.Time, error) {
+	t, err := time.Parse(dateFormat, date)
 	if err != nil {
 		return zeroTime, errors.Trace(err)
 	}
