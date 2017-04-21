@@ -107,10 +107,10 @@ func listCommits(client *github.Client, cfg *Config) ([]string, []string, error)
 	)
 	for name, value := range users {
 		userNames = append(userNames, name)
-		times = append(times, sort.StringSlice(value)[0])
+		sort.Strings(value)
+		times = append(times, value[0])
 	}
 
-	fmt.Println(len(userNames), len(times))
 	return userNames, times, nil
 }
 
