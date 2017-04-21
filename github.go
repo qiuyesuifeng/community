@@ -69,6 +69,51 @@ func (s UserSlice) Len() int           { return len(s) }
 func (s UserSlice) Less(i, j int) bool { return *s[i].Login < *s[j].Login }
 func (s UserSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
+func listCommits(client *github.Client, cfg *Config) ([]string, []string, error) {
+	opt := &github.CommitsListOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+
+	var (
+		users = make(map[string][]string)
+	)
+	for {
+		commits, resp, err := client.Repositories.ListCommits(cfg.Owner, cfg.Repo, opt)
+		if err != nil {
+			return nil, nil, errors.Trace(err)
+		}
+
+		for _, commit := range commits {
+			user := *commit.Commit.Author.Name
+			t := unifyDate(*commit.Commit.Author.Date)
+			value, ok := users[user]
+			if ok {
+				users[user] = append(value, t)
+			} else {
+				users[user] = []string{t}
+			}
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+
+		opt.Page = resp.NextPage
+	}
+
+	var (
+		userNames []string
+		times     []string
+	)
+	for name, value := range users {
+		userNames = append(userNames, name)
+		times = append(times, sort.StringSlice(value)[0])
+	}
+
+	fmt.Println(len(userNames), len(times))
+	return userNames, times, nil
+}
+
 func listForkers(client *github.Client, cfg *Config) ([]*github.User, []time.Time, error) {
 	useTimeFilter := len(cfg.StartDate) > 0 && len(cfg.EndDate) > 0
 
@@ -129,23 +174,27 @@ func listForkers(client *github.Client, cfg *Config) ([]*github.User, []time.Tim
 	return users, times, nil
 }
 
-func listWatchers(client *github.Client, cfg *Config) ([]*github.User, error) {
+func listWatchers(client *github.Client, cfg *Config) ([]*github.User, []time.Time, error) {
 	opt := &github.ListOptions{PerPage: 100}
 
-	var allUsers []*github.User
+	var (
+		allUsers []*github.User
+		times    []time.Time
+	)
 	for {
 		users, resp, err := client.Activity.ListWatchers(cfg.Owner, cfg.Repo, opt)
 		if err != nil {
-			return nil, errors.Trace(err)
+			return nil, nil, errors.Trace(err)
 		}
 
 		for _, user := range users {
 			user, _, err := client.Users.GetByID(*user.ID)
 			if err != nil {
-				return nil, errors.Trace(err)
+				return nil, nil, errors.Trace(err)
 			}
 
 			allUsers = append(allUsers, user)
+			// TODO: add watch time
 		}
 
 		if resp.NextPage == 0 {
@@ -155,7 +204,7 @@ func listWatchers(client *github.Client, cfg *Config) ([]*github.User, error) {
 		opt.Page = resp.NextPage
 	}
 
-	return allUsers, nil
+	return allUsers, times, nil
 }
 
 func listIssues(client *github.Client, cfg *Config) ([]*github.User, error) {
@@ -294,7 +343,7 @@ func listUsers(client *github.Client, file string) ([]*github.User, error) {
 	return users, nil
 }
 
-func printUsers(owner string, repo string, users []*github.User, times ...time.Time) {
+func printUsers(owner string, repo string, users []*github.User, times []time.Time) {
 	printTime := len(times) > 0
 
 	var content []byte
@@ -337,7 +386,24 @@ func printUsers(owner string, repo string, users []*github.User, times ...time.T
 	log.Infof("[users]\n%s", string(content))
 }
 
-func printUserIDs(users []*github.User, times ...time.Time) {
+func printUserNames(owner string, repo string, users []string, times []string) {
+	var content []byte
+	for i, user := range users {
+		if len(owner) > 0 && len(repo) > 0 {
+			content = append(content, []byte(fmt.Sprintf("%s/%s", owner, repo))...)
+			content = append(content, '\t')
+		}
+
+		content = append(content, []byte(unifyStr(&user))...)
+		content = append(content, '\t')
+		content = append(content, []byte(times[i])...)
+		content = append(content, '\n')
+	}
+
+	log.Infof("[user names]\n%s", string(content))
+}
+
+func printUserIDs(users []*github.User, times []time.Time) {
 	printTime := len(times) > 0
 
 	var content []byte

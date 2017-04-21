@@ -26,6 +26,21 @@ func do(cfg *Config) {
 	client := newClient(cfg.Token)
 
 	switch strings.ToLower(cfg.Service) {
+	case "contributors":
+		if len(cfg.Owner) == 0 {
+			log.Fatal("empty owner")
+		}
+
+		if len(cfg.Repo) == 0 {
+			log.Fatal("empty repo")
+		}
+
+		users, times, err := listCommits(client, cfg)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		printUserNames(cfg.Owner, cfg.Repo, users, times)
 	case "forkers":
 		if len(cfg.Owner) == 0 {
 			log.Fatal("empty owner")
@@ -40,7 +55,7 @@ func do(cfg *Config) {
 			log.Fatal(err)
 		}
 
-		printUsers(cfg.Owner, cfg.Repo, users, times...)
+		printUsers(cfg.Owner, cfg.Repo, users, times)
 	case "issues":
 		if len(cfg.Owner) == 0 {
 			log.Fatal("empty owner")
@@ -55,7 +70,7 @@ func do(cfg *Config) {
 			log.Fatal(err)
 		}
 
-		printUsers(cfg.Owner, cfg.Repo, users)
+		printUsers(cfg.Owner, cfg.Repo, users, nil)
 	case "repos":
 		if len(cfg.Owner) == 0 {
 			log.Fatal("empty owner")
@@ -81,7 +96,7 @@ func do(cfg *Config) {
 			log.Fatal(err)
 		}
 
-		printUsers(cfg.Owner, cfg.Repo, users, times...)
+		printUsers(cfg.Owner, cfg.Repo, users, times)
 	case "stargazer-ids":
 		if len(cfg.Owner) == 0 {
 			log.Fatal("empty owner")
@@ -96,7 +111,7 @@ func do(cfg *Config) {
 			log.Fatal(err)
 		}
 
-		printUserIDs(users, times...)
+		printUserIDs(users, times)
 	case "users":
 		if len(cfg.Input) == 0 {
 			log.Fatal("empty input")
@@ -107,7 +122,7 @@ func do(cfg *Config) {
 			log.Fatal(err)
 		}
 
-		printUsers("", "", users)
+		printUsers("", "", users, nil)
 	case "watchers":
 		if len(cfg.Owner) == 0 {
 			log.Fatal("empty owner")
@@ -117,12 +132,12 @@ func do(cfg *Config) {
 			log.Fatal("empty repo")
 		}
 
-		users, err := listWatchers(client, cfg)
+		users, _, err := listWatchers(client, cfg)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		printUsers(cfg.Owner, cfg.Repo, users)
+		printUsers(cfg.Owner, cfg.Repo, users, nil)
 	}
 }
 
