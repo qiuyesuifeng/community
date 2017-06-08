@@ -14,6 +14,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 	"strings"
@@ -24,6 +25,7 @@ import (
 
 func do(cfg *Config) {
 	client := newClient(cfg.Token)
+	ctx := context.Background()
 
 	switch strings.ToLower(cfg.Service) {
 	case "contributors":
@@ -35,7 +37,7 @@ func do(cfg *Config) {
 			log.Fatal("empty repo")
 		}
 
-		users, times, err := listCommits(client, cfg)
+		users, times, err := listCommits(ctx, client, cfg)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -50,7 +52,7 @@ func do(cfg *Config) {
 			log.Fatal("empty repo")
 		}
 
-		users, times, err := listForkers(client, cfg)
+		users, times, err := listForkers(ctx, client, cfg)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -65,7 +67,7 @@ func do(cfg *Config) {
 			log.Fatal("empty repo")
 		}
 
-		users, err := listIssues(client, cfg)
+		users, err := listIssues(ctx, client, cfg)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -76,7 +78,7 @@ func do(cfg *Config) {
 			log.Fatal("empty owner")
 		}
 
-		repos, err := listPublicRepos(client, cfg.Owner)
+		repos, err := listPublicRepos(ctx, client, cfg.Owner)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -91,7 +93,7 @@ func do(cfg *Config) {
 			log.Fatal("empty repo")
 		}
 
-		users, times, err := listStargazers(client, cfg, false)
+		users, times, err := listStargazers(ctx, client, cfg, false)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -106,7 +108,7 @@ func do(cfg *Config) {
 			log.Fatal("empty repo")
 		}
 
-		users, times, err := listStargazers(client, cfg, true)
+		users, times, err := listStargazers(ctx, client, cfg, true)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -117,7 +119,7 @@ func do(cfg *Config) {
 			log.Fatal("empty input")
 		}
 
-		users, err := listUsers(client, cfg.Input)
+		users, err := listUsers(ctx, client, cfg.Input)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -132,7 +134,7 @@ func do(cfg *Config) {
 			log.Fatal("empty repo")
 		}
 
-		users, _, err := listWatchers(client, cfg)
+		users, _, err := listWatchers(ctx, client, cfg)
 		if err != nil {
 			log.Fatal(err)
 		}
