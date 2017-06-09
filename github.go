@@ -23,26 +23,27 @@ import (
 	"strings"
 	"time"
 
+	"context"
 	"github.com/google/go-github/github"
 	"github.com/juju/errors"
 	"github.com/ngaut/log"
 	"golang.org/x/oauth2"
 )
 
-func newClient(token string) *github.Client {
+func newClient(ctx context.Context, token string) *github.Client {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
 	)
 
-	tc := oauth2.NewClient(oauth2.NoContext, ts)
+	tc := oauth2.NewClient(ctx, ts)
 
 	client := github.NewClient(tc)
 	return client
 }
 
-func listPublicRepos(client *github.Client, org string) ([]*github.Repository, error) {
+func listPublicRepos(ctx context.Context, client *github.Client, org string) ([]*github.Repository, error) {
 	opt := &github.RepositoryListByOrgOptions{Type: "public"}
-	repos, _, err := client.Repositories.ListByOrg(org, opt)
+	repos, _, err := client.Repositories.ListByOrg(ctx, org, opt)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -69,7 +70,7 @@ func (s UserSlice) Len() int           { return len(s) }
 func (s UserSlice) Less(i, j int) bool { return *s[i].Login < *s[j].Login }
 func (s UserSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-func listCommits(client *github.Client, cfg *Config) ([]string, []string, error) {
+func listCommits(ctx context.Context, client *github.Client, cfg *Config) ([]string, []string, error) {
 	opt := &github.CommitsListOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
 	}
@@ -78,7 +79,7 @@ func listCommits(client *github.Client, cfg *Config) ([]string, []string, error)
 		users = make(map[string][]string)
 	)
 	for {
-		commits, resp, err := client.Repositories.ListCommits(cfg.Owner, cfg.Repo, opt)
+		commits, resp, err := client.Repositories.ListCommits(ctx, cfg.Owner, cfg.Repo, opt)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
@@ -114,7 +115,7 @@ func listCommits(client *github.Client, cfg *Config) ([]string, []string, error)
 	return userNames, times, nil
 }
 
-func listForkers(client *github.Client, cfg *Config) ([]*github.User, []time.Time, error) {
+func listForkers(ctx context.Context, client *github.Client, cfg *Config) ([]*github.User, []time.Time, error) {
 	useTimeFilter := len(cfg.StartDate) > 0 && len(cfg.EndDate) > 0
 
 	var (
@@ -143,7 +144,7 @@ func listForkers(client *github.Client, cfg *Config) ([]*github.User, []time.Tim
 		times []time.Time
 	)
 	for {
-		repos, resp, err := client.Repositories.ListForks(cfg.Owner, cfg.Repo, opt)
+		repos, resp, err := client.Repositories.ListForks(ctx, cfg.Owner, cfg.Repo, opt)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
@@ -155,7 +156,7 @@ func listForkers(client *github.Client, cfg *Config) ([]*github.User, []time.Tim
 				}
 			}
 
-			user, _, err := client.Users.GetByID(*repo.Owner.ID)
+			user, _, err := client.Users.GetByID(ctx, *repo.Owner.ID)
 			if err != nil {
 				return nil, nil, errors.Trace(err)
 			}
@@ -174,7 +175,7 @@ func listForkers(client *github.Client, cfg *Config) ([]*github.User, []time.Tim
 	return users, times, nil
 }
 
-func listWatchers(client *github.Client, cfg *Config) ([]*github.User, []time.Time, error) {
+func listWatchers(ctx context.Context, client *github.Client, cfg *Config) ([]*github.User, []time.Time, error) {
 	opt := &github.ListOptions{PerPage: 100}
 
 	var (
@@ -182,13 +183,13 @@ func listWatchers(client *github.Client, cfg *Config) ([]*github.User, []time.Ti
 		times    []time.Time
 	)
 	for {
-		users, resp, err := client.Activity.ListWatchers(cfg.Owner, cfg.Repo, opt)
+		users, resp, err := client.Activity.ListWatchers(ctx, cfg.Owner, cfg.Repo, opt)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
 
 		for _, user := range users {
-			user, _, err := client.Users.GetByID(*user.ID)
+			user, _, err := client.Users.GetByID(ctx, *user.ID)
 			if err != nil {
 				return nil, nil, errors.Trace(err)
 			}
@@ -207,7 +208,7 @@ func listWatchers(client *github.Client, cfg *Config) ([]*github.User, []time.Ti
 	return allUsers, times, nil
 }
 
-func listIssues(client *github.Client, cfg *Config) ([]*github.User, error) {
+func listIssues(ctx context.Context, client *github.Client, cfg *Config) ([]*github.User, error) {
 	opt := &github.IssueListByRepoOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
 	}
@@ -215,7 +216,7 @@ func listIssues(client *github.Client, cfg *Config) ([]*github.User, error) {
 	var users []*github.User
 	userCache := make(map[int]struct{})
 	for {
-		issues, resp, err := client.Issues.ListByRepo(cfg.Owner, cfg.Repo, opt)
+		issues, resp, err := client.Issues.ListByRepo(ctx, cfg.Owner, cfg.Repo, opt)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -226,7 +227,7 @@ func listIssues(client *github.Client, cfg *Config) ([]*github.User, error) {
 				continue
 			}
 
-			user, _, err := client.Users.GetByID(*issue.User.ID)
+			user, _, err := client.Users.GetByID(ctx, *issue.User.ID)
 			if err != nil {
 				return nil, errors.Trace(err)
 			}
@@ -245,7 +246,7 @@ func listIssues(client *github.Client, cfg *Config) ([]*github.User, error) {
 	return users, nil
 }
 
-func listStargazers(client *github.Client, cfg *Config, onlyID bool) ([]*github.User, []time.Time, error) {
+func listStargazers(ctx context.Context, client *github.Client, cfg *Config, onlyID bool) ([]*github.User, []time.Time, error) {
 	opt := &github.ListOptions{PerPage: 100}
 	useTimeFilter := len(cfg.StartDate) > 0 && len(cfg.EndDate) > 0
 
@@ -272,7 +273,7 @@ func listStargazers(client *github.Client, cfg *Config, onlyID bool) ([]*github.
 		times []time.Time
 	)
 	for {
-		stargazers, resp, err := client.Activity.ListStargazers(cfg.Owner, cfg.Repo, opt)
+		stargazers, resp, err := client.Activity.ListStargazers(ctx, cfg.Owner, cfg.Repo, opt)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
@@ -289,7 +290,7 @@ func listStargazers(client *github.Client, cfg *Config, onlyID bool) ([]*github.
 			if onlyID {
 				user = stargazer.User
 			} else {
-				user, _, err = client.Users.GetByID(*stargazer.User.ID)
+				user, _, err = client.Users.GetByID(ctx, *stargazer.User.ID)
 				if err != nil {
 					return nil, nil, errors.Trace(err)
 				}
@@ -309,7 +310,7 @@ func listStargazers(client *github.Client, cfg *Config, onlyID bool) ([]*github.
 	return users, times, nil
 }
 
-func listUsers(client *github.Client, file string) ([]*github.User, error) {
+func listUsers(ctx context.Context, client *github.Client, file string) ([]*github.User, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -331,7 +332,7 @@ func listUsers(client *github.Client, file string) ([]*github.User, error) {
 				return nil, errors.Trace(err)
 			}
 
-			user, _, err := client.Users.GetByID(int(id))
+			user, _, err := client.Users.GetByID(ctx, int(id))
 			if err != nil {
 				return nil, errors.Trace(err)
 			}
