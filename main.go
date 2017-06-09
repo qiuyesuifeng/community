@@ -19,13 +19,14 @@ import (
 	"os"
 	"strings"
 
+	"fmt"
 	"github.com/juju/errors"
 	"github.com/ngaut/log"
 )
 
 func do(cfg *Config) {
-	client := newClient(cfg.Token)
 	ctx := context.Background()
+	client := newClient(ctx, cfg.Token)
 
 	switch strings.ToLower(cfg.Service) {
 	case "contributors":
