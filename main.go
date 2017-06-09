@@ -19,7 +19,6 @@ import (
 	"os"
 	"strings"
 
-	"fmt"
 	"github.com/juju/errors"
 	"github.com/ngaut/log"
 )
