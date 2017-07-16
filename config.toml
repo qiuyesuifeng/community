@@ -3,6 +3,6 @@
 # Show pingcap/tidb as an example.
 owner = "pingcap"
 repo = "tidb"
-token = "your token"
+token = "e18c11dbda2f26c12bc2f3aa5b69e2cacc0d96eb"
 
-log-level = "info"
+log-level = "debug"

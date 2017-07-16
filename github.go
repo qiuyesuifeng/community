@@ -70,7 +70,7 @@ func (s UserSlice) Len() int           { return len(s) }
 func (s UserSlice) Less(i, j int) bool { return *s[i].Login < *s[j].Login }
 func (s UserSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-func listCommits(ctx context.Context, client *github.Client, cfg *Config) ([]string, []string, error) {
+func listCommits(ctx context.Context, client *github.Client, cfg *Config) ([]string, []string, []int, error) {
 	opt := &github.CommitsListOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
 	}
@@ -81,7 +81,7 @@ func listCommits(ctx context.Context, client *github.Client, cfg *Config) ([]str
 	for {
 		commits, resp, err := client.Repositories.ListCommits(ctx, cfg.Owner, cfg.Repo, opt)
 		if err != nil {
-			return nil, nil, errors.Trace(err)
+			return nil, nil, nil, errors.Trace(err)
 		}
 
 		for _, commit := range commits {
@@ -104,15 +104,17 @@ func listCommits(ctx context.Context, client *github.Client, cfg *Config) ([]str
 
 	var (
 		userNames []string
-		times     []string
+		dates     []string
+		times     []int
 	)
 	for name, value := range users {
 		userNames = append(userNames, name)
 		sort.Strings(value)
-		times = append(times, value[0])
+		dates = append(dates, value[0])
+		times = append(times, len(value))
 	}
 
-	return userNames, times, nil
+	return userNames, dates, times, nil
 }
 
 func listForkers(ctx context.Context, client *github.Client, cfg *Config) ([]*github.User, []time.Time, error) {
@@ -387,7 +389,7 @@ func printUsers(owner string, repo string, users []*github.User, times []time.Ti
 	log.Infof("[users]\n%s", string(content))
 }
 
-func printUserNames(owner string, repo string, users []string, times []string) {
+func printUserNames(owner string, repo string, users []string, dates []string, times []int) {
 	var content []byte
 	for i, user := range users {
 		if len(owner) > 0 && len(repo) > 0 {
@@ -397,7 +399,9 @@ func printUserNames(owner string, repo string, users []string, times []string) {
 
 		content = append(content, []byte(unifyStr(&user))...)
 		content = append(content, '\t')
-		content = append(content, []byte(times[i])...)
+		content = append(content, []byte(dates[i])...)
+		content = append(content, '\t')
+		content = strconv.AppendInt(content, int64(times[i]), 10)
 		content = append(content, '\n')
 	}
 

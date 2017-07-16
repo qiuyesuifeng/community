@@ -37,12 +37,12 @@ func do(cfg *Config) {
 			log.Fatal("empty repo")
 		}
 
-		users, times, err := listCommits(ctx, client, cfg)
+		users, dates, times, err := listCommits(ctx, client, cfg)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		printUserNames(cfg.Owner, cfg.Repo, users, times)
+		printUserNames(cfg.Owner, cfg.Repo, users, dates, times)
 	case "forkers":
 		if len(cfg.Owner) == 0 {
 			log.Fatal("empty owner")
